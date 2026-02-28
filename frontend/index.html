@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finder AI Agent v2</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🤖 FINDER AI v2</h1>
+                <p class="subtitle">Multi-Agent Research Assistant</p>
+            </div>
+            <div class="header-actions">
+                <span id="session-id" class="session-badge">Session: Loading...</span>
+                <button id="clear-btn" class="btn-secondary">Clear Chat</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Chat Container -->
+            <div id="chat-container" class="chat-container">
+                <div class="welcome-message">
+                    <h2>👋 Welcome to Finder AI</h2>
+                    <p>Ask me anything! I can search the web, visit websites, and provide comprehensive answers.</p>
+                    <div class="features">
+                        <div class="feature">
+                            <span class="icon">🔍</span>
+                            <span>Web Search</span>
+                        </div>
+                        <div class="feature">
+                            <span class="icon">🌐</span>
+                            <span>Website Analysis</span>
+                        </div>
+                        <div class="feature">
+                            <span class="icon">🧠</span>
+                            <span>Context Memory</span>
+                        </div>
+                        <div class="feature">
+                            <span class="icon">📊</span>
+                            <span>Data Storage</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <div class="input-container">
+                    <textarea 
+                        id="query-input" 
+                        placeholder="Ask me anything..." 
+                        rows="1"
+                    ></textarea>
+                    <button id="send-btn" class="btn-primary">
+                        <span id="send-text">Send</span>
+                        <span id="loading-spinner" class="spinner hidden">⏳</span>
+                    </button>
+                </div>
+                <div class="input-info">
+                    <span>Press Enter to send, Shift+Enter for new line</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Sidebar (Optional - for future features) -->
+        <aside class="sidebar hidden">
+            <h3>Settings</h3>
+            <p>Future settings panel</p>
+        </aside>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
