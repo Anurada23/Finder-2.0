@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = 'http://localhost:8000/api/v2';
+const API_BASE_URL = 'http://127.0.0.1:8000/api/v2';
 
 // API Client
 class FinderAPI {

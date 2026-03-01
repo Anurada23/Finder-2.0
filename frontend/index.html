@@ -3,30 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finder AI Agent v2</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>FINDER AI — v2.049</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
+
+        <!-- ─── HEADER ─── -->
         <header class="header">
             <div class="header-content">
-                <h1>🤖 FINDER AI v2</h1>
-                <p class="subtitle">Multi-Agent Research Assistant</p>
+                <h1>FINDER AI</h1>
+                <p class="subtitle">Multi-Agent Research System // Build 2.049</p>
             </div>
             <div class="header-actions">
-                <span id="session-id" class="session-badge">Session: Loading...</span>
-                <button id="clear-btn" class="btn-secondary">Clear Chat</button>
+                <span id="session-id" class="session-badge">SESSION :: INIT</span>
+                <button id="clear-btn" class="btn-secondary">CLEAR</button>
             </div>
         </header>
 
-        <!-- Main Content -->
+        <!-- ─── MAIN ─── -->
         <main class="main-content">
-            <!-- Chat Container -->
+
+            <!-- Chat Window -->
             <div id="chat-container" class="chat-container">
                 <div class="welcome-message">
-                    <h2>👋 Welcome to Finder AI</h2>
-                    <p>Ask me anything! I can search the web, visit websites, and provide comprehensive answers.</p>
+                    <h2>// SYSTEM READY</h2>
+                    <p>Neural search engine online. Query anything — I navigate the network.</p>
+                    <div class="welcome-divider"></div>
                     <div class="features">
                         <div class="feature">
                             <span class="icon">🔍</span>
@@ -34,7 +39,7 @@
                         </div>
                         <div class="feature">
                             <span class="icon">🌐</span>
-                            <span>Website Analysis</span>
+                            <span>Site Analysis</span>
                         </div>
                         <div class="feature">
                             <span class="icon">🧠</span>
@@ -48,34 +53,128 @@
                 </div>
             </div>
 
-            <!-- Input Area -->
+            <!-- Input Terminal -->
             <div class="input-area">
                 <div class="input-container">
-                    <textarea 
-                        id="query-input" 
-                        placeholder="Ask me anything..." 
+                    <textarea
+                        id="query-input"
+                        placeholder="// enter query..."
                         rows="1"
                     ></textarea>
                     <button id="send-btn" class="btn-primary">
-                        <span id="send-text">Send</span>
-                        <span id="loading-spinner" class="spinner hidden">⏳</span>
+                        <span id="send-text">SEND</span>
+                        <span id="loading-spinner" class="spinner hidden">◌</span>
                     </button>
                 </div>
                 <div class="input-info">
-                    <span>Press Enter to send, Shift+Enter for new line</span>
+                    <span>ENTER to transmit &nbsp;·&nbsp; SHIFT+ENTER for newline</span>
+                    <div class="status-bar">
+                        <span class="status-item">
+                            <span class="status-dot online"></span>
+                            AGENT ONLINE
+                        </span>
+                        <span class="status-item">
+                            <span class="status-dot online"></span>
+                            SEARCH API
+                        </span>
+                        <span class="status-item" id="processing-status" style="display:none">
+                            <span class="status-dot processing"></span>
+                            PROCESSING
+                        </span>
+                    </div>
                 </div>
             </div>
-        </main>
 
-        <!-- Sidebar (Optional - for future features) -->
-        <aside class="sidebar hidden">
-            <h3>Settings</h3>
-            <p>Future settings panel</p>
-        </aside>
+        </main>
     </div>
 
-    <!-- Scripts -->
-    <script src="js/api.js"></script>
-    <script src="js/main.js"></script>
+    <script src="api.js"></script>
+    <script src="main.js"></script>
+s
+    <script>
+    // ─── ENHANCED UI SCRIPT ─────────────────────────────────
+    
+    // Session ID
+    const sessionEl = document.getElementById('session-id');
+    const sid = 'SID-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    sessionEl.textContent = 'SESSION :: ' + sid;
+
+    // Auto-resize textarea
+    const textarea = document.getElementById('query-input');
+    textarea.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+    });
+
+    // Enter to send
+    textarea.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            document.getElementById('send-btn').click();
+        }
+    });
+
+    // Clear chat
+    document.getElementById('clear-btn').addEventListener('click', function () {
+        const chat = document.getElementById('chat-container');
+        chat.innerHTML = `
+            <div class="welcome-message">
+                <h2>// BUFFER CLEARED</h2>
+                <p>Memory flushed. New session initiated.</p>
+                <div class="welcome-divider"></div>
+                <div class="features">
+                    <div class="feature"><span class="icon">🔍</span><span>Web Search</span></div>
+                    <div class="feature"><span class="icon">🌐</span><span>Site Analysis</span></div>
+                    <div class="feature"><span class="icon">🧠</span><span>Context Memory</span></div>
+                    <div class="feature"><span class="icon">📊</span><span>Data Storage</span></div>
+                </div>
+            </div>`;
+    });
+
+    // Inject message helper (called by api.js / main.js if they use these selectors)
+    function addMessage(role, content) {
+        const chat = document.getElementById('chat-container');
+        // Remove welcome if present
+        const welcome = chat.querySelector('.welcome-message');
+        if (welcome) welcome.remove();
+
+        const now = new Date();
+        const time = now.toTimeString().slice(0,8);
+
+        const div = document.createElement('div');
+        div.className = `message ${role}`;
+        div.innerHTML = `
+            <div class="message-header">
+                <div class="message-avatar">${role === 'user' ? 'USR' : 'AI'}</div>
+                <span class="message-role">${role === 'user' ? '// USER' : '// FINDER'}</span>
+                <span class="message-timestamp">${time}</span>
+            </div>
+            <div class="message-content">${content}</div>
+        `;
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+        return div;
+    }
+
+    // Show/hide processing status
+    function setProcessing(active) {
+        const ps = document.getElementById('processing-status');
+        const spinner = document.getElementById('loading-spinner');
+        const sendText = document.getElementById('send-text');
+        if (active) {
+            ps.style.display = 'flex';
+            spinner.classList.remove('hidden');
+            sendText.classList.add('hidden');
+        } else {
+            ps.style.display = 'none';
+            spinner.classList.add('hidden');
+            sendText.classList.remove('hidden');
+        }
+    }
+
+    // Expose for api.js / main.js
+    window.addMessage = addMessage;
+    window.setProcessing = setProcessing;
+    </script>
 </body>
 </html>
