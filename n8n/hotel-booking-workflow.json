@@ -1,0 +1,228 @@
+{
+  "name": "Finder AI - Hotel Booking System",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hotel-booking",
+        "responseMode": "lastNode"
+      },
+      "name": "Hotel Search Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/v2/hotels/search",
+        "jsonParameters": true,
+        "bodyParametersJson": "={\n  \"location\": \"{{ $json.location }}\",\n  \"checkin\": \"{{ $json.checkin }}\",\n  \"checkout\": \"{{ $json.checkout }}\",\n  \"budget\": \"{{ $json.budget }}\",\n  \"guests\": {{ $json.guests || 2 }},\n  \"preferences\": \"{{ $json.preferences }}\"\n}"
+      },
+      "name": "Call Finder AI Hotel Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.success }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse hotel information from AI response\nconst response = $input.item.json.response;\nconst location = items[0].json.location;\n\n// Extract hotel names and prices (simple regex parsing)\nconst hotelPattern = /\\$\\d+/g;\nconst prices = response.match(hotelPattern) || [];\n\n// Count hotels mentioned\nconst hotelCount = (response.match(/hotel/gi) || []).length;\n\nreturn {\n  json: {\n    location: location,\n    hotels_found: hotelCount,\n    price_range: prices.length > 0 ? prices : ['Price info not available'],\n    full_response: response,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "name": "Parse Hotel Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [890, 200]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "subject",
+              "value": "🏨 Your Hotel Search Results"
+            },
+            {
+              "name": "body",
+              "value": "=Location: {{ $json.location }}\\n\\nHotels Found: {{ $json.hotels_found }}\\n\\nAI Recommendations:\\n{{ $json.full_response }}\\n\\nSearch completed at: {{ $json.timestamp }}"
+            }
+          ]
+        }
+      },
+      "name": "Format Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [1090, 200]
+    },
+    {
+      "parameters": {
+        "operation": "sendEmail",
+        "to": "={{ $json.user_email || 'user@example.com' }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.body }}"
+      },
+      "name": "Send Email (Optional)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "position": [1290, 200]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": "YOUR_GOOGLE_SHEETS_ID",
+        "sheetName": "Hotel Searches",
+        "columns": {
+          "mappings": [
+            {
+              "name": "Timestamp",
+              "value": "={{ $now }}"
+            },
+            {
+              "name": "Location",
+              "value": "={{ $node[\"Hotel Search Webhook\"].json.location }}"
+            },
+            {
+              "name": "Hotels Found",
+              "value": "={{ $json.hotels_found }}"
+            },
+            {
+              "name": "Response",
+              "value": "={{ $json.full_response }}"
+            }
+          ]
+        }
+      },
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 2,
+      "position": [1090, 100]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "error_message",
+              "value": "Hotel search failed. Please try again."
+            }
+          ]
+        }
+      },
+      "name": "Format Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [890, 400]
+    },
+    {
+      "parameters": {
+        "channel": "#hotel-bookings",
+        "text": "=🏨 New Hotel Search\\n\\nLocation: {{ $node[\"Hotel Search Webhook\"].json.location }}\\nCheck-in: {{ $node[\"Hotel Search Webhook\"].json.checkin }}\\nBudget: {{ $node[\"Hotel Search Webhook\"].json.budget }}\\n\\nHotels Found: {{ $json.hotels_found }}\\n\\nView full results in Snowflake"
+      },
+      "name": "Notify Slack (Optional)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [1290, 100]
+    }
+  ],
+  "connections": {
+    "Hotel Search Webhook": {
+      "main": [
+        [
+          {
+            "node": "Call Finder AI Hotel Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Finder AI Hotel Search": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Parse Hotel Results",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Hotel Results": {
+      "main": [
+        [
+          {
+            "node": "Format Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email": {
+      "main": [
+        [
+          {
+            "node": "Send Email (Optional)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Notify Slack (Optional)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "tags": ["finder-ai", "hotel-booking", "automation"],
+  "triggerCount": 1,
+  "updatedAt": "2026-03-01T00:00:00.000Z",
+  "versionId": "1"
+}

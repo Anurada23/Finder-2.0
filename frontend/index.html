@@ -3,178 +3,788 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FINDER AI — v2.049</title>
+    <title>AUELIA — Curated Hotel Experiences</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --gold: #C9A84C;
+            --gold-light: #E8D5A3;
+            --gold-dark: #A07830;
+            --cream: #F7F2EC;
+            --ink: #1A1611;
+            --ink-soft: #3D3529;
+            --muted: #8C7E6E;
+            --surface: #FFFFFF;
+            --border: rgba(201,168,76,0.25);
+            --shadow: rgba(26,22,17,0.12);
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: var(--cream);
+            color: var(--ink);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── NOISE TEXTURE OVERLAY ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.6;
+        }
+
+        /* ── HERO HEADER ── */
+        .hero {
+            position: relative;
+            background: var(--ink);
+            padding: 0;
+            overflow: hidden;
+            min-height: 340px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 70% 40%, rgba(201,168,76,0.12) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 80% at 10% 80%, rgba(201,168,76,0.06) 0%, transparent 60%),
+                linear-gradient(160deg, #1A1611 0%, #2C2418 50%, #1A1611 100%);
+        }
+
+        .hero-lines {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            opacity: 0.15;
+        }
+
+        .hero-lines::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            border: 1px solid var(--gold);
+            border-radius: 50%;
+        }
+
+        .hero-lines::after {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: 5%;
+            width: 400px;
+            height: 400px;
+            border: 1px solid var(--gold);
+            border-radius: 50%;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            padding: 60px 80px 50px;
+        }
+
+        .brand-eyebrow {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.35em;
+            color: var(--gold);
+            text-transform: uppercase;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-eyebrow::before, .brand-eyebrow::after {
+            content: '';
+            display: inline-block;
+            width: 30px;
+            height: 1px;
+            background: var(--gold);
+        }
+
+        .brand-name {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2.8rem, 5vw, 4.5rem);
+            font-weight: 300;
+            color: var(--cream);
+            letter-spacing: 0.08em;
+            line-height: 1;
+            margin-bottom: 12px;
+        }
+
+        .brand-tagline {
+            font-size: 0.75rem;
+            font-weight: 300;
+            letter-spacing: 0.2em;
+            color: rgba(247,242,236,0.45);
+            text-transform: uppercase;
+        }
+
+        .header-meta {
+            position: absolute;
+            top: 32px;
+            right: 80px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            z-index: 2;
+        }
+
+        .session-pill {
+            font-size: 0.7rem;
+            letter-spacing: 0.1em;
+            color: rgba(247,242,236,0.4);
+            border: 1px solid rgba(201,168,76,0.2);
+            padding: 6px 14px;
+            border-radius: 20px;
+        }
+
+        .back-link {
+            font-size: 0.72rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--gold-light);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover { color: var(--gold); }
+
+        /* ── LAYOUT ── */
+        .page-wrapper {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 60px 40px 100px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ── SEARCH FORM ── */
+        .search-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            padding: 50px 55px;
+            margin-bottom: 50px;
+            box-shadow: 0 20px 60px var(--shadow), 0 2px 8px rgba(201,168,76,0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .search-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        .panel-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.85rem;
+            font-weight: 400;
+            color: var(--ink);
+            margin-bottom: 6px;
+            letter-spacing: 0.02em;
+        }
+
+        .panel-subtitle {
+            font-size: 0.72rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 42px;
+        }
+
+        .divider-gold {
+            width: 50px;
+            height: 1px;
+            background: linear-gradient(90deg, var(--gold), transparent);
+            margin: 16px 0 38px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px 36px;
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .form-field.span-2 { grid-column: 1 / -1; }
+
+        .field-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .field-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(139,126,110,0.3);
+            padding: 10px 0;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 400;
+            color: var(--ink);
+            transition: border-color 0.3s;
+            outline: none;
+            width: 100%;
+        }
+
+        .field-input:focus {
+            border-color: var(--gold);
+        }
+
+        .field-input::placeholder {
+            color: rgba(139,126,110,0.5);
+            font-weight: 300;
+        }
+
+        .field-input option {
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        input[type="date"].field-input {
+            color-scheme: light;
+        }
+
+        .search-btn {
+            margin-top: 42px;
+            width: 100%;
+            background: var(--ink);
+            color: var(--gold-light);
+            border: none;
+            padding: 18px 40px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .search-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--gold-dark);
+            transform: translateX(-100%);
+            transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        .search-btn:hover::before { transform: translateX(0); }
+        .search-btn:hover { color: var(--cream); }
+
+        .search-btn span { position: relative; z-index: 1; }
+
+        .spinner-text { display: none; }
+        .search-btn.loading .default-text { display: none; }
+        .search-btn.loading .spinner-text { display: inline; }
+
+        /* ── QUICK SEARCHES ── */
+        .quick-section {
+            margin-bottom: 50px;
+        }
+
+        .quick-label {
+            font-size: 0.62rem;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 18px;
+        }
+
+        .quick-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .quick-chip {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--ink-soft);
+            padding: 9px 22px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 1px;
+        }
+
+        .quick-chip:hover {
+            border-color: var(--gold);
+            color: var(--gold-dark);
+            background: rgba(201,168,76,0.05);
+        }
+
+        /* ── RESULTS ── */
+        .results-panel {
+            display: none;
+        }
+
+        .results-panel.visible { display: block; }
+
+        .results-header {
+            display: flex;
+            align-items: baseline;
+            gap: 16px;
+            margin-bottom: 36px;
+        }
+
+        .results-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            font-weight: 400;
+            color: var(--ink);
+            letter-spacing: 0.02em;
+        }
+
+        .results-count {
+            font-size: 0.68rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .hotels-list {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* ── HOTEL CARD ── */
+        .hotel-card {
+            background: var(--surface);
+            border: 1px solid rgba(201,168,76,0.15);
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0;
+            transition: transform 0.4s cubic-bezier(0.4,0,0.2,1), box-shadow 0.4s;
+            box-shadow: 0 4px 20px rgba(26,22,17,0.06);
+            overflow: hidden;
+            animation: cardIn 0.5s cubic-bezier(0.4,0,0.2,1) both;
+        }
+
+        .hotel-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 50px rgba(26,22,17,0.14), 0 0 0 1px rgba(201,168,76,0.25);
+        }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hotel-card:nth-child(1) { animation-delay: 0.05s; }
+        .hotel-card:nth-child(2) { animation-delay: 0.12s; }
+        .hotel-card:nth-child(3) { animation-delay: 0.19s; }
+        .hotel-card:nth-child(4) { animation-delay: 0.26s; }
+
+        .card-body {
+            padding: 32px 36px;
+        }
+
+        .card-aside {
+            padding: 32px 36px;
+            border-left: 1px solid rgba(201,168,76,0.12);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: space-between;
+            min-width: 200px;
+            background: rgba(247,242,236,0.5);
+        }
+
+        .hotel-rank {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 3rem;
+            font-weight: 300;
+            color: rgba(201,168,76,0.18);
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+
+        .hotel-name {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            font-weight: 400;
+            color: var(--ink);
+            letter-spacing: 0.02em;
+            margin-bottom: 4px;
+        }
+
+        .hotel-location {
+            font-size: 0.7rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 14px;
+        }
+
+        .hotel-stars {
+            color: var(--gold);
+            font-size: 0.75rem;
+            letter-spacing: 3px;
+            margin-bottom: 16px;
+        }
+
+        .hotel-description {
+            font-size: 0.85rem;
+            font-weight: 300;
+            color: var(--ink-soft);
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .amenities-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .amenity-tag {
+            font-size: 0.65rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            border: 1px solid rgba(139,126,110,0.25);
+            padding: 4px 12px;
+            border-radius: 1px;
+        }
+
+        .price-block {
+            text-align: right;
+        }
+
+        .price-from {
+            font-size: 0.6rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+
+        .price-amount {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.4rem;
+            font-weight: 400;
+            color: var(--ink);
+            line-height: 1;
+        }
+
+        .price-currency {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 400;
+            vertical-align: super;
+        }
+
+        .price-per {
+            font-size: 0.65rem;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .card-rating {
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-align: right;
+            margin-top: 10px;
+        }
+
+        .rating-num {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1rem;
+            color: var(--gold-dark);
+        }
+
+        .book-btn {
+            background: var(--ink);
+            color: var(--gold-light);
+            border: none;
+            width: 100%;
+            padding: 13px 20px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 600;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 16px;
+        }
+
+        .book-btn:hover {
+            background: var(--gold-dark);
+            color: var(--cream);
+        }
+
+        .details-btn {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid rgba(139,126,110,0.3);
+            width: 100%;
+            padding: 10px 20px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 500;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 8px;
+        }
+
+        .details-btn:hover {
+            border-color: var(--gold);
+            color: var(--gold-dark);
+        }
+
+        /* ── AI RESPONSE ── */
+        .ai-card {
+            background: var(--ink);
+            border: 1px solid rgba(201,168,76,0.3);
+            padding: 36px 42px;
+            margin-bottom: 30px;
+            animation: cardIn 0.4s both;
+        }
+
+        .ai-card-head {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .ai-icon {
+            width: 36px;
+            height: 36px;
+            border: 1px solid var(--gold);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            color: var(--gold);
+            flex-shrink: 0;
+        }
+
+        .ai-label {
+            font-size: 0.65rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--gold);
+        }
+
+        .ai-content {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1rem;
+            font-weight: 300;
+            font-style: italic;
+            color: rgba(247,242,236,0.85);
+            line-height: 2;
+            white-space: pre-wrap;
+        }
+
+        /* ── LOADING ── */
+        .loading-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 60px;
+            text-align: center;
+        }
+
+        .loading-crest {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 3rem;
+            color: var(--gold);
+            animation: pulse 2s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.95); }
+        }
+
+        .loading-text {
+            font-size: 0.68rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        /* ── FOOTER ── */
+        .page-footer {
+            text-align: center;
+            margin-top: 80px;
+            padding-top: 40px;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-crest {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.2rem;
+            font-weight: 300;
+            letter-spacing: 0.3em;
+            color: var(--muted);
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            .hero-content { padding: 50px 24px 40px; }
+            .header-meta { right: 24px; }
+            .page-wrapper { padding: 40px 20px 80px; }
+            .search-panel { padding: 36px 24px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .hotel-card { grid-template-columns: 1fr; }
+            .card-aside { border-left: none; border-top: 1px solid rgba(201,168,76,0.12); min-width: unset; align-items: flex-start; }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
 
-        <!-- ─── HEADER ─── -->
-        <header class="header">
-            <div class="header-content">
-                <h1>FINDER AI</h1>
-                <p class="subtitle">Multi-Agent Research System // Build 2.049</p>
-            </div>
-            <div class="header-actions">
-                <span id="session-id" class="session-badge">SESSION :: INIT</span>
-                <button id="clear-btn" class="btn-secondary">CLEAR</button>
-            </div>
-        </header>
+    <!-- HERO -->
+    <header class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-lines"></div>
+        <div class="header-meta">
+            <span class="session-pill" id="session-id">Session: —</span>
+            <a href="index.html" class="back-link">← Return</a>
+        </div>
+        <div class="hero-content">
+            <div class="brand-eyebrow">Curated Hospitality</div>
+            <h1 class="brand-name">Auelia</h1>
+            <p class="brand-tagline">AI-powered hotel discovery &amp; recommendation</p>
+        </div>
+    </header>
 
-        <!-- ─── MAIN ─── -->
-        <main class="main-content">
+    <!-- MAIN -->
+    <div class="page-wrapper">
 
-            <!-- Chat Window -->
-            <div id="chat-container" class="chat-container">
-                <div class="welcome-message">
-                    <h2>// SYSTEM READY</h2>
-                    <p>Neural search engine online. Query anything — I navigate the network.</p>
-                    <div class="welcome-divider"></div>
-                    <div class="features">
-                        <div class="feature">
-                            <span class="icon">🔍</span>
-                            <span>Web Search</span>
-                        </div>
-                        <div class="feature">
-                            <span class="icon">🌐</span>
-                            <span>Site Analysis</span>
-                        </div>
-                        <div class="feature">
-                            <span class="icon">🧠</span>
-                            <span>Context Memory</span>
-                        </div>
-                        <div class="feature">
-                            <span class="icon">📊</span>
-                            <span>Data Storage</span>
-                        </div>
+        <!-- SEARCH FORM -->
+        <div class="search-panel">
+            <div class="panel-title">Find Your Stay</div>
+            <div class="panel-subtitle">Intelligent curation for discerning travellers</div>
+            <div class="divider-gold"></div>
+
+            <form id="hotel-search-form">
+                <div class="form-grid">
+
+                    <div class="form-field span-2">
+                        <label class="field-label" for="location">Destination</label>
+                        <input class="field-input" type="text" id="location" placeholder="Paris, Tokyo, Amalfi Coast…" required>
                     </div>
-                </div>
-            </div>
 
-            <!-- Input Terminal -->
-            <div class="input-area">
-                <div class="input-container">
-                    <textarea
-                        id="query-input"
-                        placeholder="// enter query..."
-                        rows="1"
-                    ></textarea>
-                    <button id="send-btn" class="btn-primary">
-                        <span id="send-text">SEND</span>
-                        <span id="loading-spinner" class="spinner hidden">◌</span>
-                    </button>
-                </div>
-                <div class="input-info">
-                    <span>ENTER to transmit &nbsp;·&nbsp; SHIFT+ENTER for newline</span>
-                    <div class="status-bar">
-                        <span class="status-item">
-                            <span class="status-dot online"></span>
-                            AGENT ONLINE
-                        </span>
-                        <span class="status-item">
-                            <span class="status-dot online"></span>
-                            SEARCH API
-                        </span>
-                        <span class="status-item" id="processing-status" style="display:none">
-                            <span class="status-dot processing"></span>
-                            PROCESSING
-                        </span>
+                    <div class="form-field">
+                        <label class="field-label" for="checkin">Check-In</label>
+                        <input class="field-input" type="date" id="checkin">
                     </div>
-                </div>
-            </div>
 
-        </main>
+                    <div class="form-field">
+                        <label class="field-label" for="checkout">Check-Out</label>
+                        <input class="field-input" type="date" id="checkout">
+                    </div>
+
+                    <div class="form-field">
+                        <label class="field-label" for="guests">Guests</label>
+                        <select class="field-input" id="guests">
+                            <option value="1">1 Guest</option>
+                            <option value="2" selected>2 Guests</option>
+                            <option value="3">3 Guests</option>
+                            <option value="4">4 Guests</option>
+                            <option value="5">5+ Guests</option>
+                        </select>
+                    </div>
+
+                    <div class="form-field">
+                        <label class="field-label" for="budget">Maximum per Night</label>
+                        <input class="field-input" type="text" id="budget" placeholder="$300, under 200…">
+                    </div>
+
+                    <div class="form-field span-2">
+                        <label class="field-label" for="preferences">Preferences &amp; Desires</label>
+                        <input class="field-input" type="text" id="preferences" placeholder="Sea view, private pool, Michelin dining, butler service…">
+                    </div>
+
+                </div>
+
+                <button type="submit" class="search-btn" id="search-btn">
+                    <span class="default-text">Discover Hotels</span>
+                    <span class="spinner-text">Curating your selection…</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- QUICK SEARCHES -->
+        <div class="quick-section">
+            <p class="quick-label">Curated Destinations</p>
+            <div class="quick-chips">
+                <button class="quick-chip" onclick="quickSearch('Paris', '300')">Paris</button>
+                <button class="quick-chip" onclick="quickSearch('Tokyo', '200')">Tokyo</button>
+                <button class="quick-chip" onclick="quickSearch('Amalfi Coast', '400')">Amalfi Coast</button>
+                <button class="quick-chip" onclick="quickSearch('Dubai', '500')">Dubai</button>
+                <button class="quick-chip" onclick="quickSearch('Bali', '150')">Bali</button>
+                <button class="quick-chip" onclick="quickSearch('New York', '350')">New York</button>
+            </div>
+        </div>
+
+        <!-- RESULTS -->
+        <div id="results-section" class="results-panel">
+            <div class="results-header">
+                <div class="results-title">Your Selection</div>
+                <div class="results-count" id="results-count"></div>
+            </div>
+            <div id="results-container" class="hotels-list"></div>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="page-footer">
+            <div class="footer-crest">✦ AUELIA ✦</div>
+        </footer>
+
     </div>
 
-    <script src="api.js"></script>
-    <script src="main.js"></script>
-s
-    <script>
-    // ─── ENHANCED UI SCRIPT ─────────────────────────────────
-    
-    // Session ID
-    const sessionEl = document.getElementById('session-id');
-    const sid = 'SID-' + Math.random().toString(36).substr(2, 6).toUpperCase();
-    sessionEl.textContent = 'SESSION :: ' + sid;
-
-    // Auto-resize textarea
-    const textarea = document.getElementById('query-input');
-    textarea.addEventListener('input', function () {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 150) + 'px';
-    });
-
-    // Enter to send
-    textarea.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            document.getElementById('send-btn').click();
-        }
-    });
-
-    // Clear chat
-    document.getElementById('clear-btn').addEventListener('click', function () {
-        const chat = document.getElementById('chat-container');
-        chat.innerHTML = `
-            <div class="welcome-message">
-                <h2>// BUFFER CLEARED</h2>
-                <p>Memory flushed. New session initiated.</p>
-                <div class="welcome-divider"></div>
-                <div class="features">
-                    <div class="feature"><span class="icon">🔍</span><span>Web Search</span></div>
-                    <div class="feature"><span class="icon">🌐</span><span>Site Analysis</span></div>
-                    <div class="feature"><span class="icon">🧠</span><span>Context Memory</span></div>
-                    <div class="feature"><span class="icon">📊</span><span>Data Storage</span></div>
-                </div>
-            </div>`;
-    });
-
-    // Inject message helper (called by api.js / main.js if they use these selectors)
-    function addMessage(role, content) {
-        const chat = document.getElementById('chat-container');
-        // Remove welcome if present
-        const welcome = chat.querySelector('.welcome-message');
-        if (welcome) welcome.remove();
-
-        const now = new Date();
-        const time = now.toTimeString().slice(0,8);
-
-        const div = document.createElement('div');
-        div.className = `message ${role}`;
-        div.innerHTML = `
-            <div class="message-header">
-                <div class="message-avatar">${role === 'user' ? 'USR' : 'AI'}</div>
-                <span class="message-role">${role === 'user' ? '// USER' : '// FINDER'}</span>
-                <span class="message-timestamp">${time}</span>
-            </div>
-            <div class="message-content">${content}</div>
-        `;
-        chat.appendChild(div);
-        chat.scrollTop = chat.scrollHeight;
-        return div;
-    }
-
-    // Show/hide processing status
-    function setProcessing(active) {
-        const ps = document.getElementById('processing-status');
-        const spinner = document.getElementById('loading-spinner');
-        const sendText = document.getElementById('send-text');
-        if (active) {
-            ps.style.display = 'flex';
-            spinner.classList.remove('hidden');
-            sendText.classList.add('hidden');
-        } else {
-            ps.style.display = 'none';
-            spinner.classList.add('hidden');
-            sendText.classList.remove('hidden');
-        }
-    }
-
-    // Expose for api.js / main.js
-    window.addMessage = addMessage;
-    window.setProcessing = setProcessing;
+    <script src="hotel.js">
+        // Placeholder for JavaScript functionality (e.g., form handling, API calls, dynamic content rendering)
     </script>
+
 </body>
 </html>

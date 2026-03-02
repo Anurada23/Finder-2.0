@@ -1,18 +1,19 @@
-# Finder AI mark-2
+# 🤖 Finder AI Agent v2 - Hotel Booking System
 
-A powerful multi-agent AI research assistant built with LangChain, LangGraph, Groq, FastAPI, and Snowflake.
+A powerful multi-agent AI research assistant with **hotel booking capabilities** built with LangChain, LangGraph, Groq, FastAPI, and Snowflake.
 
-## Features
+## 🌟 Features
 
 - **Multi-Agent Architecture**: Specialized agents working together (Planner, Researcher, Memory, Synthesizer)
+- **🏨 Hotel Booking System**: Search, compare, and book hotels using AI
 - **Web Research**: DuckDuckGo search and website content extraction
 - **Context-Aware Memory**: Maintains conversation history across sessions
 - **Snowflake Integration**: Persistent data storage and analytics
 - **FastAPI Backend**: High-performance REST API
-- **Modern Frontend**: Clean, responsive UI
+- **Modern Frontend**: Clean, responsive UI with dedicated hotel booking interface
 - **n8n Integration**: Webhook support for workflow automation
 
-## Architecture
+## 🏗️ Architecture
 
 ```
 User → Frontend → FastAPI → LangGraph Workflow
@@ -36,7 +37,7 @@ Results → Snowflake Storage → n8n Follow-up Tasks
 ### 1. Clone the repository
 
 ```bash
-git clone <(https://github.com/Anurada23/Finder-2.0/tree/master)>
+git clone <"https://github.com/Anurada23/Finder-2.0">
 cd finder-ai-v2
 ```
 
@@ -241,7 +242,7 @@ finder-ai-v2/
 └── requirements.txt  # Dependencies
 ```
 
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### API Not Connecting
 - Check if server is running: `curl http://localhost:8000/api/v2/health`
@@ -258,8 +259,9 @@ finder-ai-v2/
 - Verify API URL in `frontend/js/api.js`
 - Check browser console for errors
 
-## Security Notes
+## 🔐 Security Notes
 
+- Never commit `.env` file
 - Use environment variables in production
 - Implement rate limiting for production
 - Add authentication for public deployment
@@ -281,7 +283,7 @@ finder-ai-v2/
 - [ ] Add PDF/document upload
 - [ ] Implement RAG pipeline
 
-##  Contributing
+## 🤝 Contributing
 
 Contributions welcome! Please:
 1. Fork the repository
@@ -290,12 +292,15 @@ Contributions welcome! Please:
 4. Push to branch
 5. Open Pull Request
 
+## 📄 License
 
-## 👥 Author
+MIT License - See LICENSE file
+
+## 👥 Authors
 
 Anuradha Senaratne
 
-##  Acknowledgments
+## 🙏 Acknowledgments
 
 - LangChain & LangGraph
 - Groq
@@ -304,4 +309,3 @@ Anuradha Senaratne
 - n8n
 
 ---
-

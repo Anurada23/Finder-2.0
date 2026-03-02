@@ -50,6 +50,74 @@ WHERE session_id = %s
 ORDER BY created_at ASC
 """
 
+# Hotel Searches
+INSERT_HOTEL_SEARCH = """
+INSERT INTO hotel_searches (
+    search_id, session_id, user_id, location, checkin_date, 
+    checkout_date, guests, budget, preferences
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+"""
+
+GET_HOTEL_SEARCH = """
+SELECT * FROM hotel_searches 
+WHERE search_id = %s
+"""
+
+GET_USER_HOTEL_SEARCHES = """
+SELECT * FROM hotel_searches 
+WHERE user_id = %s 
+ORDER BY created_at DESC 
+LIMIT %s
+"""
+
+# Hotel Results
+INSERT_HOTEL_RESULT = """
+INSERT INTO hotel_results (
+    result_id, search_id, hotel_name, price_per_night, total_price,
+    rating, platform, booking_url, amenities, location_details
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+"""
+
+GET_HOTEL_RESULTS = """
+SELECT * FROM hotel_results 
+WHERE search_id = %s 
+ORDER BY price_per_night ASC
+"""
+
+GET_BEST_HOTEL_DEALS = """
+SELECT * FROM hotel_results 
+WHERE search_id = %s 
+  AND rating >= %s
+ORDER BY price_per_night ASC 
+LIMIT %s
+"""
+
+# Hotel Bookings
+INSERT_HOTEL_BOOKING = """
+INSERT INTO hotel_bookings (
+    booking_id, search_id, user_id, hotel_name, checkin_date,
+    checkout_date, guests, total_price, booking_status, 
+    confirmation_code, payment_status
+) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+"""
+
+UPDATE_BOOKING_STATUS = """
+UPDATE hotel_bookings 
+SET booking_status = %s, updated_at = CURRENT_TIMESTAMP()
+WHERE booking_id = %s
+"""
+
+GET_USER_BOOKINGS = """
+SELECT * FROM hotel_bookings 
+WHERE user_id = %s 
+ORDER BY created_at DESC
+"""
+
+GET_BOOKING_BY_ID = """
+SELECT * FROM hotel_bookings 
+WHERE booking_id = %s
+"""
+
 # Analytics Queries
 GET_QUERY_STATS = """
 SELECT 
@@ -82,4 +150,27 @@ FROM agent_traces
 WHERE created_at >= DATEADD(day, -%s, CURRENT_TIMESTAMP())
 GROUP BY agent_name
 ORDER BY total_actions DESC
+"""
+
+# Hotel Analytics
+GET_POPULAR_DESTINATIONS = """
+SELECT 
+    location,
+    COUNT(*) as search_count,
+    AVG(budget) as avg_budget
+FROM hotel_searches
+WHERE created_at >= DATEADD(day, -%s, CURRENT_TIMESTAMP())
+GROUP BY location
+ORDER BY search_count DESC
+LIMIT %s
+"""
+
+GET_BOOKING_STATS = """
+SELECT 
+    COUNT(*) as total_bookings,
+    SUM(total_price) as total_revenue,
+    AVG(total_price) as avg_booking_value
+FROM hotel_bookings
+WHERE created_at >= DATEADD(day, -%s, CURRENT_TIMESTAMP())
+  AND booking_status = 'confirmed'
 """

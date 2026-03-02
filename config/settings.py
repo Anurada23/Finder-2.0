@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     
     # API Keys
     groq_api_key: str
+    amadeus_api_key: str = ""   
+    amadeus_api_secret: str = ""  
     
     # Snowflake Configuration (all optional)
     snowflake_account: Optional[str] = None
@@ -26,7 +28,7 @@ class Settings(BaseSettings):
     session_timeout_minutes: int = 30
     
     # Model Settings
-    model_name: str = "llama-3.3-70b-versatile"
+    model_name: str = "meta-llama/llama-4-scout-17b-16e-instruct"
     model_temperature: float = 0.0
     
     class Config:

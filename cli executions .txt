@@ -1,0 +1,16 @@
+Finder V2
+
+VM - .venv\Scripts\Activate
+
+front end serve - python -m http.server 3000 
+
+front end link - http://localhost:3000/frontend/index.html
+
+
+backend serve - python run.py
+
+Backend API doc - http://localhost:8000/docs
+
+check which task still occuping - 
+
+kill the server if occupied-  taskkill /PID 35104 /F

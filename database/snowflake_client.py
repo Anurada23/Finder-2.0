@@ -138,6 +138,54 @@ class SnowflakeClient:
                 created_at TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
                 FOREIGN KEY (session_id) REFERENCES research_sessions(session_id)
             )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS hotel_searches (
+                search_id VARCHAR(100) PRIMARY KEY,
+                session_id VARCHAR(100),
+                user_id VARCHAR(100),
+                location VARCHAR(255),
+                checkin_date DATE,
+                checkout_date DATE,
+                guests INTEGER,
+                budget DECIMAL(10,2),
+                preferences TEXT,
+                created_at TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS hotel_results (
+                result_id VARCHAR(100) PRIMARY KEY,
+                search_id VARCHAR(100),
+                hotel_name VARCHAR(255),
+                price_per_night DECIMAL(10,2),
+                total_price DECIMAL(10,2),
+                rating DECIMAL(3,2),
+                platform VARCHAR(50),
+                booking_url TEXT,
+                amenities TEXT,
+                location_details TEXT,
+                created_at TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
+                FOREIGN KEY (search_id) REFERENCES hotel_searches(search_id)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS hotel_bookings (
+                booking_id VARCHAR(100) PRIMARY KEY,
+                search_id VARCHAR(100),
+                user_id VARCHAR(100),
+                hotel_name VARCHAR(255),
+                checkin_date DATE,
+                checkout_date DATE,
+                guests INTEGER,
+                total_price DECIMAL(10,2),
+                booking_status VARCHAR(50),
+                confirmation_code VARCHAR(100),
+                payment_status VARCHAR(50),
+                created_at TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
+                updated_at TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP(),
+                FOREIGN KEY (search_id) REFERENCES hotel_searches(search_id)
+            )
             """
         ]
         

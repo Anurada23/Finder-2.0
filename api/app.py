@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import router
+from api.hotel_routes import router as hotel_router
 from config import settings
 from utils import logger
 from database import snowflake_client
@@ -14,8 +15,8 @@ from database import snowflake_client
 
 # Create FastAPI app
 app = FastAPI(
-    title="Finder AI Agent v2",
-    description="Multi-agent AI research assistant with memory and Snowflake integration",
+    title="Finder AI Agent v2 - Hotel Booking System",
+    description="Multi-agent AI research assistant with hotel booking capabilities",
     version="2.0.0"
 )
 
@@ -30,12 +31,13 @@ app.add_middleware(
 
 # Include routes
 app.include_router(router, prefix="/api/v2")
+app.include_router(hotel_router, prefix="/api/v2", tags=["hotels"])
 
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize services on startup"""
-    logger.info("Starting Finder AI v2...")
+    logger.info("Starting Finder AI v2 - Hotel Booking System...")
     
     try:
         # Initialize Snowflake connection
@@ -67,14 +69,26 @@ async def shutdown_event():
 async def root():
     """Root endpoint"""
     return {
-        "name": "Finder AI Agent v2",
+        "name": "Finder AI Agent v2 - Hotel Booking System",
         "version": "2.0.0",
         "status": "running",
+        "features": [
+            "Multi-agent AI research",
+            "Hotel search and booking",
+            "Price comparison",
+            "Context-aware memory",
+            "Snowflake analytics",
+            "n8n automation"
+        ],
         "endpoints": {
+            "docs": "/docs",
             "health": "/api/v2/health",
             "research": "/api/v2/research",
             "webhook": "/api/v2/webhook",
-            "history": "/api/v2/history/{session_id}"
+            "history": "/api/v2/history/{session_id}",
+            "hotel_search": "/api/v2/hotels/search",
+            "hotel_compare": "/api/v2/hotels/compare",
+            "hotel_searches": "/api/v2/hotels/searches/{session_id}"
         }
     }
 

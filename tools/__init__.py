@@ -6,8 +6,9 @@ from .snowflake_tool import (
     save_conversation_to_snowflake,
     query_past_sessions
 )
+from .hotel_tools import search_hotels, compare_hotel_prices, get_hotel_reviews
+from .amadeus_tool import search_hotels_amadeus  
 
-# All available tools for agents
 ALL_TOOLS = [
     search_web,
     visit_website,
@@ -15,7 +16,11 @@ ALL_TOOLS = [
     summarize_conversation,
     save_to_snowflake,
     save_conversation_to_snowflake,
-    query_past_sessions
+    query_past_sessions,
+    search_hotels,
+    compare_hotel_prices,
+    get_hotel_reviews,
+    search_hotels_amadeus  
 ]
 
 __all__ = [
@@ -26,5 +31,9 @@ __all__ = [
     "save_to_snowflake",
     "save_conversation_to_snowflake",
     "query_past_sessions",
+    "search_hotels",
+    "compare_hotel_prices",
+    "get_hotel_reviews",
+    "search_hotels_amadeus",  # ← add this
     "ALL_TOOLS"
 ]
