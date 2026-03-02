@@ -20,7 +20,7 @@ class ResearcherAgent:
             api_key=settings.groq_api_key
         )
         self.system_prompt = RESEARCHER_PROMPT
-        self.tools = [search_hotels_amadeus, search_web]  # ← Amadeus replaces scraping
+        self.tools = [search_hotels_amadeus]  
 
         # Cap iterations to prevent runaway loops + token overflow
         self.agent = create_react_agent(

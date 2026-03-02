@@ -5,7 +5,6 @@ import requests
 
 
 def _get_amadeus_token() -> str:
-    """Get Amadeus OAuth token"""
     res = requests.post(
         "https://test.api.amadeus.com/v1/security/oauth2/token",
         data={
@@ -24,13 +23,6 @@ def search_hotels_amadeus(city: str, check_in: str, check_out: str, budget: floa
     """
     Search real hotel availability and prices using Amadeus API.
     Returns top 5 hotels with live pricing.
-
-    Args:
-        city: City name (e.g., 'Paris')
-        check_in: Check-in date in YYYY-MM-DD format
-        check_out: Check-out date in YYYY-MM-DD format
-        budget: Maximum price per night in USD
-        adults: Number of adults (default 1)
     """
     try:
         logger.info(f"Amadeus hotel search: {city}, {check_in} to {check_out}, budget ${budget}")
@@ -38,7 +30,6 @@ def search_hotels_amadeus(city: str, check_in: str, check_out: str, budget: floa
         token = _get_amadeus_token()
         headers = {"Authorization": f"Bearer {token}"}
 
-        # Step 1: Get city IATA code
         city_res = requests.get(
             "https://test.api.amadeus.com/v1/reference-data/locations/cities",
             headers=headers,
@@ -51,7 +42,6 @@ def search_hotels_amadeus(city: str, check_in: str, check_out: str, budget: floa
             return f"City '{city}' not found in Amadeus."
         city_code = city_data[0]["iataCode"]
 
-        # Step 2: Get hotel IDs in that city (4-5 star only)
         hotels_res = requests.get(
             "https://test.api.amadeus.com/v1/reference-data/locations/hotels/by-city",
             headers=headers,
@@ -64,7 +54,6 @@ def search_hotels_amadeus(city: str, check_in: str, check_out: str, budget: floa
         if not hotel_ids:
             return f"No hotels found in {city}."
 
-        # Step 3: Get live offers and pricing
         offers_res = requests.get(
             "https://test.api.amadeus.com/v3/shopping/hotel-offers",
             headers=headers,
@@ -73,26 +62,24 @@ def search_hotels_amadeus(city: str, check_in: str, check_out: str, budget: floa
                 "checkInDate": check_in,
                 "checkOutDate": check_out,
                 "adults": adults,
-                #"priceRange": f"1-{int(budget)}",
                 "currency": "USD",
                 "bestRateOnly": True
             },
             timeout=15
         )
         offers_res.raise_for_status()
-        offers = offers_res.json().get("data", [])[:5]  # TOP 5 ONLY
+        all_offers = offers_res.json().get("data", [])
 
-        # Filter by budget manually
         filtered = [
-            o for o in offers
+            o for o in all_offers
             if float(o["offers"][0]["price"]["total"]) <= budget
         ][:5]
 
-        if not offers:
+        if not filtered:
             return f"No hotels available in {city} for those dates under ${budget}/night."
 
         results = []
-        for offer in offers:
+        for offer in filtered:
             hotel = offer["hotel"]
             price_info = offer["offers"][0]["price"]
             results.append(
@@ -111,3 +98,67 @@ def search_hotels_amadeus(city: str, check_in: str, check_out: str, budget: floa
     except Exception as e:
         logger.error(f"Amadeus search failed: {e}")
         return f"Hotel search failed: {str(e)}"
+
+
+def verify_hotel_amadeus(hotel_id: str, check_in: str, check_out: str, adults: int = 1) -> dict:
+    """
+    Verify real-time availability and price for ONE specific hotel.
+    Called by the /verify endpoint — NOT a LangChain tool.
+    Returns a dict with availability, current price, and booking link.
+    """
+    try:
+        logger.info(f"Amadeus verify: {hotel_id}, {check_in} to {check_out}")
+
+        token = _get_amadeus_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        offers_res = requests.get(
+            "https://test.api.amadeus.com/v3/shopping/hotel-offers",
+            headers=headers,
+            params={
+                "hotelIds": hotel_id,
+                "checkInDate": check_in,
+                "checkOutDate": check_out,
+                "adults": adults,
+                "currency": "USD",
+                "bestRateOnly": True
+            },
+            timeout=15
+        )
+        offers_res.raise_for_status()
+        data = offers_res.json().get("data", [])
+
+        if not data:
+            return {
+                "available": False,
+                "hotel_id": hotel_id,
+                "message": "No availability found for these dates."
+            }
+
+        offer = data[0]
+        hotel = offer["hotel"]
+        price_info = offer["offers"][0]["price"]
+        offer_id = offer["offers"][0]["id"]
+
+        # Build Amadeus booking link
+        booking_link = f"https://test.api.amadeus.com/v3/shopping/hotel-offers/{offer_id}"
+
+        return {
+            "available": True,
+            "hotel_id": hotel_id,
+            "hotel_name": hotel.get("name", ""),
+            "current_price": float(price_info["total"]),
+            "currency": price_info.get("currency", "USD"),
+            "offer_id": offer_id,
+            "booking_link": booking_link,
+            "check_in": check_in,
+            "check_out": check_out,
+            "message": "Available"
+        }
+
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"Amadeus verify HTTP error: {e}")
+        return {"available": False, "hotel_id": hotel_id, "message": str(e)}
+    except Exception as e:
+        logger.error(f"Amadeus verify failed: {e}")
+        return {"available": False, "hotel_id": hotel_id, "message": str(e)}
