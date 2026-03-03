@@ -2,6 +2,7 @@
 let currentSessionId   = null;
 let lastSearchCheckin  = null;
 let lastSearchCheckout = null;
+let lastSearchCity     = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeSession();
@@ -9,20 +10,17 @@ document.addEventListener('DOMContentLoaded', () => {
     setMinDates();
 });
 
-// ── SESSION ──
 function initializeSession() {
     currentSessionId = 'hotel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     const el = document.getElementById('session-id');
     if (el) el.textContent = `Session: ${currentSessionId.substr(0, 20)}...`;
 }
 
-// ── EVENT LISTENERS ──
 function setupEventListeners() {
     const form = document.getElementById('hotel-search-form');
     if (form) form.addEventListener('submit', handleHotelSearch);
 }
 
-// ── DATE SETUP ──
 function setMinDates() {
     const today = new Date().toISOString().split('T')[0];
     const ci    = document.getElementById('checkin');
@@ -33,7 +31,6 @@ function setMinDates() {
     }
 }
 
-// ── MAIN SEARCH ──
 async function handleHotelSearch(e) {
     e.preventDefault();
 
@@ -46,8 +43,10 @@ async function handleHotelSearch(e) {
 
     if (!location) { alert('Please enter a destination'); return; }
 
+    // Store for verify calls
     lastSearchCheckin  = checkin  || null;
     lastSearchCheckout = checkout || null;
+    lastSearchCity     = location;  // ← store city for verify
 
     setLoading(true);
     showResults();
@@ -80,14 +79,12 @@ async function handleHotelSearch(e) {
     }
 }
 
-// ── QUICK SEARCH ──
 function quickSearch(location, budget) {
-    document.getElementById('location').value   = location;
-    document.getElementById('budget').value     = `$${budget}`;
+    document.getElementById('location').value = location;
+    document.getElementById('budget').value   = `$${budget}`;
     document.getElementById('hotel-search-form').scrollIntoView({ behavior: 'smooth' });
 }
 
-// ── SHOW RESULTS PANEL ──
 function showResults() {
     const s = document.getElementById('results-section');
     if (s) {
@@ -96,7 +93,6 @@ function showResults() {
     }
 }
 
-// ── LOADING CARD ──
 function showLoadingCard() {
     const c = document.getElementById('results-container');
     if (!c) return;
@@ -107,7 +103,6 @@ function showLoadingCard() {
         </div>`;
 }
 
-// ── DISPLAY RESULTS ──
 function displayResults(data, location) {
     const container = document.getElementById('results-container');
     const countEl   = document.getElementById('results-count');
@@ -133,24 +128,10 @@ function displayResults(data, location) {
         return;
     }
 
-    const summaryLine = data.response.split('\n')
-        .find(l => l.trim() && !l.trim().startsWith('•')) || '';
-
     const cardsHtml = hotels.map((hotel, i) => buildHotelCard(hotel, i, location)).join('');
-
-    container.innerHTML = `
-        ${summaryLine ? `
-        <div class="ai-card" style="margin-bottom: 30px;">
-            <div class="ai-card-head">
-                <div class="ai-icon">✦</div>
-                <span class="ai-label">Auelia Intelligence</span>
-            </div>
-            <div class="ai-content">${escapeHtml(summaryLine)}</div>
-        </div>` : ''}
-        ${cardsHtml}`;
+    container.innerHTML = cardsHtml;
 }
 
-// ── BUILD HOTEL CARD ──
 function buildHotelCard(hotel, index, location) {
     const cardId = `card-${index}`;
     return `
@@ -177,25 +158,19 @@ function buildHotelCard(hotel, index, location) {
                         <span class="rating-num">${escapeHtml(hotel.rating)}</span>
                         ${hotel.rating !== 'N/A' ? '/ 5' : ''}
                     </div>
-                    ${hotel.hotelId
-                        ? `<button class="details-btn" style="margin-top:16px;"
-                               id="${cardId}-verify-btn"
-                               onclick="handleVerify('${cardId}', '${escapeAttr(hotel.hotelId)}', '${escapeAttr(hotel.name)}', ${parseFloat(hotel.price) || 0})">
-                               ◎ Check Live Price
-                           </button>`
-                        : `<button class="details-btn" style="margin-top:16px; opacity:0.4; cursor:not-allowed;" disabled>
-                               ◎ Live Price Unavailable
-                           </button>`
-                    }
+                    <button class="details-btn" style="margin-top:16px;"
+                        id="${cardId}-verify-btn"
+                        onclick="handleVerify('${cardId}', '${escapeAttr(hotel.name)}', ${parseFloat(hotel.price) || 0})">
+                        ◎ Check Live Price
+                    </button>
                 </div>
             </div>
-            <!-- Live price panel — hidden until verify clicked -->
             <div id="${cardId}-live" style="display:none; border-top:1px solid rgba(201,168,76,0.15); padding:24px 36px; background:rgba(247,242,236,0.4);"></div>
         </div>`;
 }
 
-// ── VERIFY HANDLER ──
-async function handleVerify(cardId, hotelId, hotelName, originalPrice) {
+// ── VERIFY — now sends hotel_name + city instead of hotel_id ──
+async function handleVerify(cardId, hotelName, originalPrice) {
     const btn     = document.getElementById(`${cardId}-verify-btn`);
     const liveDiv = document.getElementById(`${cardId}-live`);
     if (!btn || !liveDiv) return;
@@ -223,8 +198,8 @@ async function handleVerify(cardId, hotelId, hotelName, originalPrice) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                hotel_id:       hotelId,
                 hotel_name:     hotelName,
+                city:           lastSearchCity,   // ← city instead of hotel_id
                 checkin:        lastSearchCheckin,
                 checkout:       lastSearchCheckout,
                 original_price: originalPrice,
@@ -248,7 +223,6 @@ async function handleVerify(cardId, hotelId, hotelName, originalPrice) {
     }
 }
 
-// ── RENDER LIVE PANEL ──
 function renderLivePanel(cardId, data, originalPrice) {
     const liveDiv = document.getElementById(`${cardId}-live`);
     const btn     = document.getElementById(`${cardId}-verify-btn`);
@@ -266,7 +240,6 @@ function renderLivePanel(cardId, data, originalPrice) {
         return;
     }
 
-    // Price change indicator
     let priceHtml = `
         <span style="font-family:'Cormorant Garamond',serif; font-size:1.8rem; color:var(--ink);">
             $${data.current_price ? data.current_price.toFixed(2) : originalPrice}
@@ -279,11 +252,10 @@ function renderLivePanel(cardId, data, originalPrice) {
         const symbol = data.price_direction === 'down' ? '↓' : '↑';
         const label  = data.price_direction === 'down' ? 'Price dropped!' : 'Price increased';
         changeHtml = `
-            <span style="font-size:0.7rem; color:${color}; margin-left:10px; letter-spacing:0.1em;">
+            <span style="font-size:0.7rem; color:${color}; margin-left:10px;">
                 ${symbol} $${data.price_diff.toFixed(2)} — ${label}
             </span>`;
 
-        // Strike through original price
         const priceEl = document.getElementById(`${cardId}-price`);
         if (priceEl) {
             priceEl.innerHTML = `
@@ -293,14 +265,13 @@ function renderLivePanel(cardId, data, originalPrice) {
         }
     }
 
-    // Source indicator — shows if n8n or direct handled it
     const sourceHtml = data.source === 'n8n'
-        ? `<span style="color:var(--gold); font-size:0.6rem; letter-spacing:0.15em;">
-               ⚡ Verified via n8n Automation
-           </span>`
-        : `<span style="font-size:0.6rem; color:var(--muted);">
-               Direct verify
-           </span>`;
+        ? `<span style="color:var(--gold); font-size:0.6rem; letter-spacing:0.15em;">⚡ Verified via n8n Automation</span>`
+        : `<span style="font-size:0.6rem; color:var(--muted);">Direct verify</span>`;
+
+    const matchedNote = data.matched_name && data.matched_name !== data.hotel_name
+        ? `<div style="font-size:0.62rem; color:var(--muted); margin-top:4px;">Matched to: ${escapeHtml(data.matched_name)}</div>`
+        : '';
 
     const checkedAt = new Date(data.checked_at).toLocaleTimeString();
 
@@ -316,6 +287,7 @@ function renderLivePanel(cardId, data, originalPrice) {
                 <div style="font-size:0.62rem; color:var(--muted); margin-top:6px;">
                     Checked at ${checkedAt} &nbsp;·&nbsp; ${sourceHtml}
                 </div>
+                ${matchedNote}
             </div>
             <div style="display:flex; flex-direction:column; gap:8px; min-width:160px;">
                 <a href="https://www.booking.com/search.html?ss=${encodeURIComponent(data.hotel_name)}"
@@ -330,13 +302,12 @@ function renderLivePanel(cardId, data, originalPrice) {
             </div>
         </div>`;
 
-    btn.textContent      = '✓ Verified';
+    btn.textContent       = '✓ Verified';
     btn.style.borderColor = '#2ecc71';
     btn.style.color       = '#2ecc71';
     btn.disabled          = false;
 }
 
-// ── SELECT HANDLER ──
 function handleSelect(hotelName, price, cardId) {
     document.querySelectorAll('.hotel-card').forEach(c => {
         c.style.border = '1px solid rgba(201,168,76,0.15)';
@@ -348,8 +319,8 @@ function handleSelect(hotelName, price, cardId) {
     if (liveDiv) {
         const existing = liveDiv.querySelector('.selection-confirm');
         if (!existing) {
-            const confirm    = document.createElement('div');
-            confirm.className = 'selection-confirm';
+            const confirm      = document.createElement('div');
+            confirm.className  = 'selection-confirm';
             confirm.style.cssText = 'margin-top:16px; padding-top:16px; border-top:1px solid rgba(201,168,76,0.2); font-size:0.72rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--gold);';
             confirm.textContent   = `✦ ${hotelName} selected at $${price.toFixed(2)}/night`;
             liveDiv.appendChild(confirm);
@@ -357,7 +328,7 @@ function handleSelect(hotelName, price, cardId) {
     }
 }
 
-// ── PARSE HOTELS FROM AI RESPONSE ──
+// ── PARSE — no Hotel ID needed anymore ──
 function parseHotelsFromResponse(responseText) {
     const hotels = [];
     const lines  = responseText.split('\n').filter(l => {
@@ -387,25 +358,21 @@ function parseHotelsFromResponse(responseText) {
         const rating = ratingMatch ? ratingMatch[1] : 'N/A';
         const stars  = Math.min(5, Math.max(1, Math.round(parseFloat(rating) || 4)));
 
-        const idMatch = cleaned.match(/Hotel\s+ID[:\s]*([A-Z0-9]{4,})/i);
-        const hotelId = idMatch ? idMatch[1] : '';
-
         const descMatch = line.match(/\*([^*]{15,})\*/);
         const description = descMatch ? descMatch[1].trim() : '';
 
-        hotels.push({ name, price, rating, stars, hotelId, description, location: '' });
+        // No hotelId needed — name + city sent to verify instead
+        hotels.push({ name, price, rating, stars, description, location: '' });
     });
 
     return hotels;
 }
 
-// ── STARS ──
 function renderStars(count) {
     const n = Math.min(5, Math.max(0, count));
     return '★'.repeat(n) + '☆'.repeat(5 - n);
 }
 
-// ── ERROR ──
 function showError(message) {
     const c = document.getElementById('results-container');
     if (!c) return;
@@ -421,7 +388,6 @@ function showError(message) {
         </div>`;
 }
 
-// ── LOADING ──
 function setLoading(isLoading) {
     const btn = document.getElementById('search-btn');
     if (!btn) return;
@@ -429,7 +395,6 @@ function setLoading(isLoading) {
     btn.classList.toggle('loading', isLoading);
 }
 
-// ── UTILS ──
 function escapeHtml(text) {
     if (text == null) return '';
     const d = document.createElement('div');

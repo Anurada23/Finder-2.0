@@ -2,52 +2,65 @@ from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.prebuilt import create_react_agent
 from config import settings, RESEARCHER_PROMPT
-from tools import search_web, search_hotels_amadeus  # ← replaced visit_website + search_hotels
+from tools.search_tool import search_web
+from tools.visit_website import visit_website
 from utils import logger
 from typing import Dict, Any
 
 
 class ResearcherAgent:
     """
-    Researcher Agent - executes hotel research using Amadeus API + web search.
-    Limited to top 5 results for speed and token efficiency.
+    Researcher Agent - uses search_web + visit_website for hotel discovery.
+    No Amadeus API here — Amadeus lives in the n8n verification layer only.
     """
 
     def __init__(self):
         self.model = ChatGroq(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",  # ← 30K TPM free
+            model="llama-3.3-70b-versatile",
             temperature=settings.model_temperature,
             api_key=settings.groq_api_key
         )
         self.system_prompt = RESEARCHER_PROMPT
-        self.tools = [search_hotels_amadeus]  
+        self.tools = [search_web, visit_website]
 
-        # Cap iterations to prevent runaway loops + token overflow
         self.agent = create_react_agent(
             self.model,
-            self.tools,
-            
+            self.tools
         )
 
     def conduct_research(self, plan: str, query: str) -> Dict[str, Any]:
         try:
-            logger.info("Researcher Agent: Starting research")
+            logger.info("Researcher Agent: Starting research with search tools")
 
             research_prompt = f"""Research Plan:
 {plan}
 
 Original Query: {query}
 
-Use search_hotels_amadeus for real-time hotel prices and availability.
-Use search_web only if you need additional context (reviews, area info).
-Return top 5 results only. Be concise."""
+Instructions:
+- Use search_web to find hotels matching the query
+- Use visit_website only if you need pricing details from a specific page
+- Call search_web ONCE with a clear query like "best hotels in Paris under $2000 per night"
+- Return top 5 hotels only in this EXACT format, nothing else:
 
-            response = self.agent.invoke({
-                "messages": [
-                    SystemMessage(content=self.system_prompt),
-                    HumanMessage(content=research_prompt)
-                ]
-            }, config={"recursion_limit": 30})
+- Hotel Name | ~$price/night | City, Country
+
+Rules:
+- NO numbered lists
+- NO citations or sources
+- NO TripAdvisor/Booking.com footnotes
+- NO intro or closing text
+- Just the 5 bullet lines"""
+
+            response = self.agent.invoke(
+                {
+                    "messages": [
+                        SystemMessage(content=self.system_prompt),
+                        HumanMessage(content=research_prompt)
+                    ]
+                },
+                config={"recursion_limit": 15}
+            )
 
             findings = response["messages"][-1].content
 
@@ -56,7 +69,7 @@ Return top 5 results only. Be concise."""
                 if hasattr(msg, "tool_calls") and msg.tool_calls:
                     tool_calls.extend(msg.tool_calls)
 
-            logger.info(f"Researcher Agent: Research complete ({len(tool_calls)} tool calls)")
+            logger.info(f"Researcher Agent: Complete ({len(tool_calls)} tool calls)")
 
             return {
                 "findings": findings,
