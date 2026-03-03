@@ -1,5 +1,5 @@
 // ── AUELIA Hotel JS ──
-let currentSessionId  = null;
+let currentSessionId   = null;
 let lastSearchCheckin  = null;
 let lastSearchCheckout = null;
 
@@ -25,8 +25,8 @@ function setupEventListeners() {
 // ── DATE SETUP ──
 function setMinDates() {
     const today = new Date().toISOString().split('T')[0];
-    const ci = document.getElementById('checkin');
-    const co = document.getElementById('checkout');
+    const ci    = document.getElementById('checkin');
+    const co    = document.getElementById('checkout');
     if (ci) {
         ci.min = today;
         ci.addEventListener('change', () => { if (co) co.min = ci.value; });
@@ -46,7 +46,6 @@ async function handleHotelSearch(e) {
 
     if (!location) { alert('Please enter a destination'); return; }
 
-    // Store dates for verify calls
     lastSearchCheckin  = checkin  || null;
     lastSearchCheckout = checkout || null;
 
@@ -83,8 +82,8 @@ async function handleHotelSearch(e) {
 
 // ── QUICK SEARCH ──
 function quickSearch(location, budget) {
-    document.getElementById('location').value = location;
-    document.getElementById('budget').value = `$${budget}`;
+    document.getElementById('location').value   = location;
+    document.getElementById('budget').value     = `$${budget}`;
     document.getElementById('hotel-search-form').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -155,12 +154,12 @@ function displayResults(data, location) {
 function buildHotelCard(hotel, index, location) {
     const cardId = `card-${index}`;
     return `
-        <div class="hotel-card" id="${cardId}" style="animation-delay:${0.05 + index * 0.07}s; flex-direction: column;">
-            <div style="display: grid; grid-template-columns: 1fr auto;">
+        <div class="hotel-card" id="${cardId}" style="animation-delay:${0.05 + index * 0.07}s; flex-direction:column;">
+            <div style="display:grid; grid-template-columns:1fr auto;">
                 <div class="card-body">
                     <div class="hotel-rank">0${index + 1}</div>
                     <div class="hotel-name">${escapeHtml(hotel.name)}</div>
-                    <div class="hotel-location">${escapeHtml(hotel.location || location || 'N/A')}</div>
+                    <div class="hotel-location">${escapeHtml(hotel.location || location || '')}</div>
                     <div class="hotel-stars">${renderStars(hotel.stars)}</div>
                     ${hotel.description
                         ? `<div class="hotel-description">${escapeHtml(hotel.description)}</div>`
@@ -178,17 +177,20 @@ function buildHotelCard(hotel, index, location) {
                         <span class="rating-num">${escapeHtml(hotel.rating)}</span>
                         ${hotel.rating !== 'N/A' ? '/ 5' : ''}
                     </div>
-                    <button class="details-btn" style="margin-top:16px;"
-                        id="${cardId}-verify-btn"
-                        onclick="handleVerify('${cardId}', '${escapeAttr(hotel.hotelId)}', '${escapeAttr(hotel.name)}', ${parseFloat(hotel.price) || 0})">
-                        ◎ Check Live Price
-                    </button>
+                    ${hotel.hotelId
+                        ? `<button class="details-btn" style="margin-top:16px;"
+                               id="${cardId}-verify-btn"
+                               onclick="handleVerify('${cardId}', '${escapeAttr(hotel.hotelId)}', '${escapeAttr(hotel.name)}', ${parseFloat(hotel.price) || 0})">
+                               ◎ Check Live Price
+                           </button>`
+                        : `<button class="details-btn" style="margin-top:16px; opacity:0.4; cursor:not-allowed;" disabled>
+                               ◎ Live Price Unavailable
+                           </button>`
+                    }
                 </div>
             </div>
-
             <!-- Live price panel — hidden until verify clicked -->
-            <div id="${cardId}-live" style="display:none; border-top: 1px solid rgba(201,168,76,0.15); padding: 24px 36px; background: rgba(247,242,236,0.4);">
-            </div>
+            <div id="${cardId}-live" style="display:none; border-top:1px solid rgba(201,168,76,0.15); padding:24px 36px; background:rgba(247,242,236,0.4);"></div>
         </div>`;
 }
 
@@ -198,7 +200,6 @@ async function handleVerify(cardId, hotelId, hotelName, originalPrice) {
     const liveDiv = document.getElementById(`${cardId}-live`);
     if (!btn || !liveDiv) return;
 
-    // Guard: need dates
     if (!lastSearchCheckin || !lastSearchCheckout) {
         liveDiv.style.display = 'block';
         liveDiv.innerHTML = `<span style="font-size:0.8rem; color:var(--muted);">
@@ -206,15 +207,14 @@ async function handleVerify(cardId, hotelId, hotelName, originalPrice) {
         return;
     }
 
-    // Loading state
-    btn.disabled = true;
-    btn.textContent = '◌ Checking…';
+    btn.disabled    = true;
+    btn.textContent = '◌ Checking via n8n…';
     liveDiv.style.display = 'block';
     liveDiv.innerHTML = `
         <div style="display:flex; align-items:center; gap:12px;">
             <div class="loading-crest" style="font-size:1.2rem; margin:0;">✦</div>
             <span style="font-size:0.72rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted);">
-                Verifying availability…
+                Verifying via n8n automation…
             </span>
         </div>`;
 
@@ -243,7 +243,7 @@ async function handleVerify(cardId, hotelId, hotelName, originalPrice) {
             <span style="font-size:0.8rem; color:#c0392b;">
                 Could not verify availability. Please try again.
             </span>`;
-        btn.disabled = false;
+        btn.disabled    = false;
         btn.textContent = '◎ Check Live Price';
     }
 }
@@ -257,7 +257,7 @@ function renderLivePanel(cardId, data, originalPrice) {
     if (!data.available) {
         liveDiv.innerHTML = `
             <div style="display:flex; align-items:center; gap:10px;">
-                <span style="color:#c0392b; font-size:1rem;">✕</span>
+                <span style="color:#c0392b;">✕</span>
                 <span style="font-size:0.78rem; letter-spacing:0.12em; text-transform:uppercase; color:#c0392b;">
                     Not available for these dates
                 </span>
@@ -269,7 +269,7 @@ function renderLivePanel(cardId, data, originalPrice) {
     // Price change indicator
     let priceHtml = `
         <span style="font-family:'Cormorant Garamond',serif; font-size:1.8rem; color:var(--ink);">
-            $${data.current_price.toFixed(2)}
+            $${data.current_price ? data.current_price.toFixed(2) : originalPrice}
         </span>
         <span style="font-size:0.65rem; color:var(--muted); margin-left:6px;">/night</span>`;
 
@@ -283,7 +283,7 @@ function renderLivePanel(cardId, data, originalPrice) {
                 ${symbol} $${data.price_diff.toFixed(2)} — ${label}
             </span>`;
 
-        // Also strike through original price on card
+        // Strike through original price
         const priceEl = document.getElementById(`${cardId}-price`);
         if (priceEl) {
             priceEl.innerHTML = `
@@ -292,6 +292,15 @@ function renderLivePanel(cardId, data, originalPrice) {
                 </span>`;
         }
     }
+
+    // Source indicator — shows if n8n or direct handled it
+    const sourceHtml = data.source === 'n8n'
+        ? `<span style="color:var(--gold); font-size:0.6rem; letter-spacing:0.15em;">
+               ⚡ Verified via n8n Automation
+           </span>`
+        : `<span style="font-size:0.6rem; color:var(--muted);">
+               Direct verify
+           </span>`;
 
     const checkedAt = new Date(data.checked_at).toLocaleTimeString();
 
@@ -305,7 +314,7 @@ function renderLivePanel(cardId, data, originalPrice) {
                     ${priceHtml}${changeHtml}
                 </div>
                 <div style="font-size:0.62rem; color:var(--muted); margin-top:6px;">
-                    Checked at ${checkedAt}
+                    Checked at ${checkedAt} &nbsp;·&nbsp; ${sourceHtml}
                 </div>
             </div>
             <div style="display:flex; flex-direction:column; gap:8px; min-width:160px;">
@@ -314,37 +323,35 @@ function renderLivePanel(cardId, data, originalPrice) {
                    style="text-align:center; text-decoration:none; display:block;">
                     View &amp; Book →
                 </a>
-                <button class="details-btn" onclick="handleSelect('${escapeAttr(data.hotel_name)}', ${data.current_price}, '${cardId}')">
+                <button class="details-btn"
+                    onclick="handleSelect('${escapeAttr(data.hotel_name)}', ${data.current_price || originalPrice}, '${cardId}')">
                     Select This Hotel
                 </button>
             </div>
         </div>`;
 
-    // Update verify button
-    btn.textContent = '✓ Verified';
+    btn.textContent      = '✓ Verified';
     btn.style.borderColor = '#2ecc71';
-    btn.style.color = '#2ecc71';
-    btn.disabled = false;
+    btn.style.color       = '#2ecc71';
+    btn.disabled          = false;
 }
 
 // ── SELECT HANDLER ──
 function handleSelect(hotelName, price, cardId) {
-    // Highlight selected card
     document.querySelectorAll('.hotel-card').forEach(c => {
         c.style.border = '1px solid rgba(201,168,76,0.15)';
     });
     const card = document.getElementById(cardId);
     if (card) card.style.border = '1px solid var(--gold)';
 
-    // Show confirmation message
     const liveDiv = document.getElementById(`${cardId}-live`);
     if (liveDiv) {
         const existing = liveDiv.querySelector('.selection-confirm');
         if (!existing) {
-            const confirm = document.createElement('div');
+            const confirm    = document.createElement('div');
             confirm.className = 'selection-confirm';
             confirm.style.cssText = 'margin-top:16px; padding-top:16px; border-top:1px solid rgba(201,168,76,0.2); font-size:0.72rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--gold);';
-            confirm.textContent = `✦ ${hotelName} selected at $${price.toFixed(2)}/night`;
+            confirm.textContent   = `✦ ${hotelName} selected at $${price.toFixed(2)}/night`;
             liveDiv.appendChild(confirm);
         }
     }
@@ -353,55 +360,36 @@ function handleSelect(hotelName, price, cardId) {
 // ── PARSE HOTELS FROM AI RESPONSE ──
 function parseHotelsFromResponse(responseText) {
     const hotels = [];
-    const lines  = responseText.split('\n');
+    const lines  = responseText.split('\n').filter(l => {
+        const t = l.trim();
+        return t.startsWith('•') || t.startsWith('-') || /^\d+\./.test(t);
+    });
 
     lines.forEach(line => {
-        const trimmed = line.trim();
-
-        // Skip empty, title-like, source, or note lines
-        if (!trimmed) return;
-        if (/^#+/.test(trimmed)) return;                    // markdown headers
-        if (/^\*[^*]/.test(trimmed) && trimmed.endsWith('*')) return;  // italic notes
-        if (/^sources?/i.test(trimmed)) return;             // Sources section
-        if (/^\[\d+\]/.test(trimmed)) return;               // [1] citations
-        if (/^all five|^why these|^quick tip/i.test(trimmed)) return;  // summary lines
-        if (!/\$/.test(trimmed)) return;                    // must contain a price
-
-        // Must look like a hotel line
-        if (!/^\d+\.|^[•\-\*]/.test(trimmed)) return;
-
-        const cleaned = trimmed
+        const cleaned = line
             .replace(/^\d+\.\s*/, '')
             .replace(/\*\*/g, '')
             .replace(/^[•\-\*]\s*/, '')
-            .replace(/【\d+】/g, '')      // remove 【1】 citations
+            .replace(/【\d+】/g, '')
             .trim();
 
-        if (!cleaned) return;
+        if (!cleaned || !/\$/.test(cleaned)) return;
 
-        // Name — before first –, |, or $
         const nameMatch = cleaned.match(/^([^|–—$~≈]+)/);
         const name = nameMatch
             ? nameMatch[1].replace(/[-–—]\s*$/, '').trim()
             : 'Unknown Hotel';
 
-        // Skip if name looks like a title (no real hotel keywords)
-        if (/^\*\*.*\*\*$/.test(name) && !/hotel|inn|suites|plaza|palace|resort/i.test(name)) return;
-
-        // Price
         const priceMatch = cleaned.match(/[≈~]?\$([\d,]+(?:\.\d{1,2})?)/);
         const price = priceMatch ? priceMatch[1].replace(',', '') : '0';
 
-        // Rating
-        const ratingMatch = cleaned.match(/(\d+(?:\.\d+)?)\s*[★\/](?:\s*\d+)?/);
+        const ratingMatch = cleaned.match(/(\d+(?:\.\d+)?)\s*[★\/]/);
         const rating = ratingMatch ? ratingMatch[1] : 'N/A';
         const stars  = Math.min(5, Math.max(1, Math.round(parseFloat(rating) || 4)));
 
-        // Hotel ID — only in real Amadeus responses
-        const idMatch = cleaned.match(/Hotel\s+ID[:\s]*([A-Z0-9]{6,})/i);
+        const idMatch = cleaned.match(/Hotel\s+ID[:\s]*([A-Z0-9]{4,})/i);
         const hotelId = idMatch ? idMatch[1] : '';
 
-        // Description — italic text
         const descMatch = line.match(/\*([^*]{15,})\*/);
         const description = descMatch ? descMatch[1].trim() : '';
 
@@ -424,11 +412,11 @@ function showError(message) {
     c.innerHTML = `
         <div class="ai-card" style="border-color:#c0392b;">
             <div class="ai-card-head">
-                <div class="ai-icon" style="border-color:#c0392b;color:#c0392b;">✕</div>
+                <div class="ai-icon" style="border-color:#c0392b; color:#c0392b;">✕</div>
                 <span class="ai-label" style="color:#c0392b;">Search Failed</span>
             </div>
             <div class="ai-content" style="color:rgba(247,242,236,0.7);">${escapeHtml(message)}</div>
-            <button class="book-btn" style="margin-top:20px;width:auto;padding:12px 30px;"
+            <button class="book-btn" style="margin-top:20px; width:auto; padding:12px 30px;"
                 onclick="location.reload()">Try Again</button>
         </div>`;
 }

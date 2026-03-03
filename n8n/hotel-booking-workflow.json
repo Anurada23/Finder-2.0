@@ -1,217 +1,205 @@
 {
-  "name": "Finder AI - Hotel Booking System",
+  "name": "Finder AI - Hotel Verify & Booking System",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "hotel-booking",
+        "path": "hotel-verify",
         "responseMode": "lastNode"
       },
-      "name": "Hotel Search Webhook",
+      "name": "Hotel Verify Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [250, 300]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "http://localhost:8000/api/v2/hotels/search",
-        "jsonParameters": true,
-        "bodyParametersJson": "={\n  \"location\": \"{{ $json.location }}\",\n  \"checkin\": \"{{ $json.checkin }}\",\n  \"checkout\": \"{{ $json.checkout }}\",\n  \"budget\": \"{{ $json.budget }}\",\n  \"guests\": {{ $json.guests || 2 }},\n  \"preferences\": \"{{ $json.preferences }}\"\n}"
+        "jsCode": "const body = $input.item.json;\n\nreturn {\n  json: {\n    hotel_id:       body.hotel_id       || '',\n    hotel_name:     body.hotel_name     || '',\n    checkin:        body.checkin        || '',\n    checkout:       body.checkout       || '',\n    original_price: body.original_price || 0,\n    adults:         body.adults         || 2,\n    session_id:     body.session_id     || 'unknown',\n    timestamp:      new Date().toISOString()\n  }\n};"
       },
-      "name": "Call Finder AI Hotel Search",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 3,
+      "name": "Parse Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [470, 300]
     },
     {
       "parameters": {
-        "conditions": {
-          "boolean": [
+        "method": "POST",
+        "url": "http://localhost:8000/api/v2/hotels/verify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "value1": "={{ $json.success }}",
-              "value2": true
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "hotel_id",
+              "value": "={{ $json.hotel_id }}"
+            },
+            {
+              "name": "hotel_name",
+              "value": "={{ $json.hotel_name }}"
+            },
+            {
+              "name": "checkin",
+              "value": "={{ $json.checkin }}"
+            },
+            {
+              "name": "checkout",
+              "value": "={{ $json.checkout }}"
+            },
+            {
+              "name": "original_price",
+              "value": "={{ $json.original_price }}"
+            },
+            {
+              "name": "adults",
+              "value": "={{ $json.adults }}"
+            },
+            {
+              "name": "session_id",
+              "value": "={{ $json.session_id }}"
             }
           ]
         }
       },
-      "name": "Check Success",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
+      "name": "Call Amadeus Verify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
       "position": [690, 300]
     },
     {
       "parameters": {
-        "functionCode": "// Parse hotel information from AI response\nconst response = $input.item.json.response;\nconst location = items[0].json.location;\n\n// Extract hotel names and prices (simple regex parsing)\nconst hotelPattern = /\\$\\d+/g;\nconst prices = response.match(hotelPattern) || [];\n\n// Count hotels mentioned\nconst hotelCount = (response.match(/hotel/gi) || []).length;\n\nreturn {\n  json: {\n    location: location,\n    hotels_found: hotelCount,\n    price_range: prices.length > 0 ? prices : ['Price info not available'],\n    full_response: response,\n    timestamp: new Date().toISOString()\n  }\n};"
+        "jsCode": "const verify    = $input.item.json;\nconst parsed    = $('Parse Request').item.json;\n\nlet priceStatus = 'unchanged';\nif (verify.price_changed) {\n  priceStatus = verify.price_direction === 'down' ? 'decreased' : 'increased';\n}\n\nreturn {\n  json: {\n    hotel_name:     verify.hotel_name     || parsed.hotel_name,\n    hotel_id:       verify.hotel_id       || parsed.hotel_id,\n    available:      verify.available,\n    original_price: parsed.original_price,\n    current_price:  verify.current_price  || parsed.original_price,\n    price_status:   priceStatus,\n    price_diff:     verify.price_diff     || 0,\n    price_direction:verify.price_direction || null,\n    checkin:        parsed.checkin,\n    checkout:       parsed.checkout,\n    session_id:     parsed.session_id,\n    checked_at:     verify.checked_at     || new Date().toISOString(),\n    timestamp:      new Date().toISOString()\n  }\n};"
       },
-      "name": "Parse Hotel Results",
+      "name": "Compare Price",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 1,
-      "position": [890, 200]
-    },
-    {
-      "parameters": {
-        "values": {
-          "string": [
-            {
-              "name": "subject",
-              "value": "🏨 Your Hotel Search Results"
-            },
-            {
-              "name": "body",
-              "value": "=Location: {{ $json.location }}\\n\\nHotels Found: {{ $json.hotels_found }}\\n\\nAI Recommendations:\\n{{ $json.full_response }}\\n\\nSearch completed at: {{ $json.timestamp }}"
-            }
-          ]
-        }
-      },
-      "name": "Format Email",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 1,
-      "position": [1090, 200]
-    },
-    {
-      "parameters": {
-        "operation": "sendEmail",
-        "to": "={{ $json.user_email || 'user@example.com' }}",
-        "subject": "={{ $json.subject }}",
-        "message": "={{ $json.body }}"
-      },
-      "name": "Send Email (Optional)",
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 1,
-      "position": [1290, 200]
+      "typeVersion": 2,
+      "position": [910, 300]
     },
     {
       "parameters": {
         "operation": "append",
         "documentId": "YOUR_GOOGLE_SHEETS_ID",
-        "sheetName": "Hotel Searches",
+        "sheetName": "Hotel Verifications",
         "columns": {
           "mappings": [
             {
               "name": "Timestamp",
-              "value": "={{ $now }}"
+              "value": "={{ $json.timestamp }}"
             },
             {
-              "name": "Location",
-              "value": "={{ $node[\"Hotel Search Webhook\"].json.location }}"
+              "name": "Hotel Name",
+              "value": "={{ $json.hotel_name }}"
             },
             {
-              "name": "Hotels Found",
-              "value": "={{ $json.hotels_found }}"
+              "name": "Hotel ID",
+              "value": "={{ $json.hotel_id }}"
             },
             {
-              "name": "Response",
-              "value": "={{ $json.full_response }}"
+              "name": "Available",
+              "value": "={{ $json.available }}"
+            },
+            {
+              "name": "Original Price",
+              "value": "={{ $json.original_price }}"
+            },
+            {
+              "name": "Current Price",
+              "value": "={{ $json.current_price }}"
+            },
+            {
+              "name": "Price Status",
+              "value": "={{ $json.price_status }}"
+            },
+            {
+              "name": "Price Diff",
+              "value": "={{ $json.price_diff }}"
+            },
+            {
+              "name": "Check-in",
+              "value": "={{ $json.checkin }}"
+            },
+            {
+              "name": "Check-out",
+              "value": "={{ $json.checkout }}"
+            },
+            {
+              "name": "Session ID",
+              "value": "={{ $json.session_id }}"
+            },
+            {
+              "name": "Checked At",
+              "value": "={{ $json.checked_at }}"
             }
           ]
         }
       },
-      "name": "Save to Google Sheets",
+      "name": "Log to Google Sheets",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 2,
-      "position": [1090, 100]
+      "position": [1130, 200]
     },
     {
       "parameters": {
-        "values": {
-          "string": [
-            {
-              "name": "error_message",
-              "value": "Hotel search failed. Please try again."
-            }
-          ]
-        }
+        "respondWith": "json",
+        "responseBody": "={\n  \"available\":      {{ $json.available }},\n  \"hotel_name\":     \"{{ $json.hotel_name }}\",\n  \"current_price\":  {{ $json.current_price }},\n  \"price_status\":   \"{{ $json.price_status }}\",\n  \"price_diff\":     {{ $json.price_diff }},\n  \"checked_at\":     \"{{ $json.checked_at }}\"\n}"
       },
-      "name": "Format Error",
-      "type": "n8n-nodes-base.set",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [890, 400]
-    },
-    {
-      "parameters": {
-        "channel": "#hotel-bookings",
-        "text": "=🏨 New Hotel Search\\n\\nLocation: {{ $node[\"Hotel Search Webhook\"].json.location }}\\nCheck-in: {{ $node[\"Hotel Search Webhook\"].json.checkin }}\\nBudget: {{ $node[\"Hotel Search Webhook\"].json.budget }}\\n\\nHotels Found: {{ $json.hotels_found }}\\n\\nView full results in Snowflake"
-      },
-      "name": "Notify Slack (Optional)",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 1,
-      "position": [1290, 100]
+      "position": [1130, 400]
     }
   ],
   "connections": {
-    "Hotel Search Webhook": {
+    "Hotel Verify Webhook": {
       "main": [
         [
           {
-            "node": "Call Finder AI Hotel Search",
+            "node": "Parse Request",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Call Finder AI Hotel Search": {
+    "Parse Request": {
       "main": [
         [
           {
-            "node": "Check Success",
+            "node": "Call Amadeus Verify",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check Success": {
+    "Call Amadeus Verify": {
       "main": [
         [
           {
-            "node": "Parse Hotel Results",
+            "node": "Compare Price",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare Price": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheets",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Save to Google Sheets",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Format Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse Hotel Results": {
-      "main": [
-        [
-          {
-            "node": "Format Email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Email": {
-      "main": [
-        [
-          {
-            "node": "Send Email (Optional)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Save to Google Sheets": {
-      "main": [
-        [
-          {
-            "node": "Notify Slack (Optional)",
+            "node": "Respond to Webhook",
             "type": "main",
             "index": 0
           }
@@ -219,10 +207,12 @@
       ]
     }
   },
-  "settings": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
   "staticData": null,
-  "tags": ["finder-ai", "hotel-booking", "automation"],
+  "tags": ["finder-ai", "hotel-verify", "automation"],
   "triggerCount": 1,
-  "updatedAt": "2026-03-01T00:00:00.000Z",
-  "versionId": "1"
+  "updatedAt": "2026-03-02T00:00:00.000Z",
+  "versionId": "2"
 }

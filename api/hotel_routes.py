@@ -7,11 +7,14 @@ from memory import conversation_memory
 from database import snowflake_client, queries
 from utils import logger, generate_session_id
 from tools.amadeus_tool import verify_hotel_amadeus
+import httpx
 import json
 import re
 
 
 router = APIRouter()
+
+N8N_WEBHOOK_URL = "http://localhost:5678/webhook/hotel-verify"
 
 
 # ── REQUEST / RESPONSE MODELS ──
@@ -55,13 +58,10 @@ class HotelVerifyRequest(BaseModel):
 
 @router.post("/hotels/search", response_model=HotelSearchResponse)
 async def search_hotels(request: HotelSearchRequest, background_tasks: BackgroundTasks):
-    """
-    Search for hotels using the multi-agent AI system.
-    """
+    """Search for hotels using the multi-agent AI system."""
     try:
         session_id = request.session_id or generate_session_id()
 
-        # Build natural language query
         query_parts = [f"Find hotels in {request.location}"]
         if request.checkin and request.checkout:
             query_parts.append(f"from {request.checkin} to {request.checkout}")
@@ -77,7 +77,6 @@ async def search_hotels(request: HotelSearchRequest, background_tasks: Backgroun
 
         result = finder_workflow.execute(query=query, session_id=session_id)
 
-        # Count bullet-point hotels in response
         hotels_found = len([
             line for line in result.get("response", "").split("\n")
             if line.strip().startswith("•")
@@ -110,12 +109,59 @@ async def search_hotels(request: HotelSearchRequest, background_tasks: Backgroun
 @router.post("/hotels/verify")
 async def verify_hotel(request: HotelVerifyRequest, background_tasks: BackgroundTasks):
     """
-    Verify real-time availability and price for a specific hotel.
-    Triggered when user clicks 'Check Live Price' on a hotel card.
+    Verify real-time availability via n8n automation layer.
+    n8n calls Amadeus, logs to Google Sheets, returns result.
+    Falls back to direct Amadeus if n8n is unreachable.
     """
     try:
-        logger.info(f"API: Verifying hotel {request.hotel_id} - {request.hotel_name}")
+        logger.info(f"API: Verify request for {request.hotel_name} → triggering n8n")
 
+        # ── Try n8n first ──
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                n8n_response = await client.post(
+                    N8N_WEBHOOK_URL,
+                    json={
+                        "hotel_id":       request.hotel_id,
+                        "hotel_name":     request.hotel_name,
+                        "checkin":        request.checkin,
+                        "checkout":       request.checkout,
+                        "original_price": request.original_price,
+                        "adults":         request.adults,
+                        "session_id":     request.session_id or "unknown"
+                    }
+                )
+
+            if n8n_response.status_code == 200:
+                data = n8n_response.json()
+                logger.info(f"API: n8n verify success for {request.hotel_name}")
+
+                return {
+                    "available":       data.get("available", False),
+                    "hotel_id":        request.hotel_id,
+                    "hotel_name":      request.hotel_name,
+                    "original_price":  request.original_price,
+                    "current_price":   data.get("current_price"),
+                    "price_changed":   data.get("price_status") != "unchanged",
+                    "price_direction": "down" if data.get("price_status") == "decreased"
+                                       else "up" if data.get("price_status") == "increased"
+                                       else None,
+                    "price_diff":      data.get("price_diff", 0),
+                    "offer_id":        None,
+                    "booking_link":    f"https://www.booking.com/search.html?ss={request.hotel_name}",
+                    "message":         "Verified via n8n",
+                    "checked_at":      data.get("checked_at", datetime.utcnow().isoformat()),
+                    "source":          "n8n"
+                }
+
+        except httpx.ConnectError:
+            logger.warning("API: n8n not reachable — falling back to direct Amadeus verify")
+
+        except Exception as n8n_err:
+            logger.warning(f"API: n8n error — falling back to direct Amadeus: {n8n_err}")
+
+        # ── Fallback: direct Amadeus call ──
+        logger.info(f"API: Direct Amadeus verify for {request.hotel_name}")
         result = verify_hotel_amadeus(
             hotel_id=request.hotel_id,
             check_in=request.checkin,
@@ -123,7 +169,6 @@ async def verify_hotel(request: HotelVerifyRequest, background_tasks: Background
             adults=request.adults
         )
 
-        # Calculate price change
         price_changed   = False
         price_direction = None
         price_diff      = 0.0
@@ -134,7 +179,6 @@ async def verify_hotel(request: HotelVerifyRequest, background_tasks: Background
                 price_changed   = True
                 price_direction = "up" if price_diff > 0 else "down"
 
-        # Save to Snowflake in background
         if result["available"]:
             background_tasks.add_task(
                 save_verification_background,
@@ -159,7 +203,8 @@ async def verify_hotel(request: HotelVerifyRequest, background_tasks: Background
             "offer_id":        result.get("offer_id"),
             "booking_link":    result.get("booking_link"),
             "message":         result.get("message"),
-            "checked_at":      datetime.utcnow().isoformat()
+            "checked_at":      datetime.utcnow().isoformat(),
+            "source":          "direct"
         }
 
     except Exception as e:
@@ -169,15 +214,12 @@ async def verify_hotel(request: HotelVerifyRequest, background_tasks: Background
 
 @router.post("/hotels/compare")
 async def compare_hotel(request: HotelComparisonRequest):
-    """
-    Compare prices for a specific hotel across platforms.
-    """
+    """Compare prices for a specific hotel."""
     try:
         session_id = request.session_id or generate_session_id()
         query      = f"Compare prices for {request.hotel_name} in {request.location} across booking platforms"
 
         logger.info(f"API: Hotel comparison - {request.hotel_name}")
-
         result = finder_workflow.execute(query=query, session_id=session_id)
 
         return {
@@ -213,7 +255,7 @@ async def get_hotel_searches(session_id: str):
 
 @router.get("/hotels/popular-destinations")
 async def get_popular_destinations(days: int = 30, limit: int = 10):
-    """Get most searched hotel destinations from Snowflake analytics."""
+    """Get most searched hotel destinations."""
     try:
         return {
             "message": "Popular destinations analytics (requires Snowflake)",
@@ -277,11 +319,10 @@ def save_verification_background(
     checkin: str,
     checkout: str
 ):
-    """Save hotel verification/selection to Snowflake (non-blocking)."""
+    """Save hotel verification to Snowflake (non-blocking)."""
     try:
         logger.info(f"Background: Saving verification for {hotel_name} — ${current_price}/night")
         # TODO: add Snowflake query when HOTEL_VERIFICATIONS table is ready
-        # snowflake_client.execute_write(queries.INSERT_HOTEL_VERIFICATION, (...))
 
     except Exception as e:
         logger.error(f"Background: Failed to save verification: {e}")
